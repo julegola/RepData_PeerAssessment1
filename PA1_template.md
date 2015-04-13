@@ -1,0 +1,146 @@
+# Reproducible Research: Peer Assessment 1
+
+
+## Loading and preprocessing the data  
+
+
+```r
+data <- read.csv("activity.csv") ##  load data from file
+data$date <- as.Date(data$date) ## convert date column to class Date
+```
+
+
+## What is mean total number of steps taken per day?  
+
+The following histogram shows the distribution of the total number of steps taken per day.
+
+
+```r
+steps_per_day <- tapply(data$steps, data$date, sum)
+hist(steps_per_day, main = "Steps Per Day")
+```
+
+![plot of chunk unnamed-chunk-2](PA1_template_files/figure-html/unnamed-chunk-2.png) 
+
+Let's look at the mean and median of the total number of steps taken per day.  
+Mean:
+
+```r
+mean(steps_per_day, na.rm = T)
+```
+
+```
+## [1] 10766
+```
+Median:
+
+```r
+median(steps_per_day, na.rm = T)
+```
+
+```
+## [1] 10765
+```
+
+## What is the average daily activity pattern?
+
+The following plot shows the average number of steps per interval (averaged across all days).
+
+```r
+interval <- unique(data$interval)
+avg_steps_per_interv <- tapply(data$steps, data$interval, mean, na.rm = T)
+plot(interval, avg_steps_per_interv, type = "l", main = "Average Number of Steps per Interval")
+```
+
+![plot of chunk unnamed-chunk-5](PA1_template_files/figure-html/unnamed-chunk-5.png) 
+
+The 5-minute interval with the maximum number of steps on average across all the days in the dataset is
+
+```r
+names(which.max(avg_steps_per_interv))
+```
+
+```
+## [1] "835"
+```
+
+## Imputing missing values
+
+Let's check how many rows in the dataset have missing values.
+
+```r
+sum(!complete.cases(data))
+```
+
+```
+## [1] 2304
+```
+
+We fill in the missing values with the average number of steps in the corresponding interval (avg. across all days):
+
+```r
+data_complete <- data ## create new data.frame equal to data
+missing_data_interval <- data$interval[is.na(data$steps)] ## these are the intervals with missing data  
+
+## Fill in the gaps, values are stored in avg_steps_per_interv
+data_complete$steps[is.na(data$steps)] <- avg_steps_per_interv[as.character(missing_data_interval)]
+```
+
+Let's create the histogram for the distribution of the total number of steps taken per day again with this new dataset. 
+
+
+```r
+steps_per_day_compl <- tapply(data_complete$steps, data_complete$date, sum)
+hist(steps_per_day_compl, main = "Steps Per Day")
+```
+
+![plot of chunk unnamed-chunk-9](PA1_template_files/figure-html/unnamed-chunk-9.png) 
+
+The mean and median of the total number of steps taken per day are as follows.    
+Mean:
+
+```r
+mean(steps_per_day_compl, na.rm = T)
+```
+
+```
+## [1] 10766
+```
+Median:
+
+```r
+median(steps_per_day_compl, na.rm = T)
+```
+
+```
+## [1] 10766
+```
+
+Since the data for 8 full days was missing in the original dataset, and we filled in these gaps with averaged data, we find those days in the histogram in the bar that contains the mean (10,000 - 15,000). All other bars in the histogram are unchanged. Also, as expected, the mean stays the same, only the median changes slightly.
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+First, add an additional variable "weekend" to the dataset, indicating if day is a weekday or weekend.  
+
+
+```r
+data_complete$weekend <- factor(setNames(c(1, 0, 0, 0, 0, 0, 1), c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))[weekdays(data_complete$date)], labels = c("weekday", "weekend"))
+```
+
+Then, let's plot the average number of steps per interval separately for weekends and weekdays:  
+
+
+```r
+## Create new data.frame with data for plotting
+avg_steps <- with(data_complete, data.frame("interval" = unique(interval), 
+                                            tapply(steps, list(interval, weekend), mean)))
+
+## Create panel plot with lattice
+library(lattice)
+xyplot(weekday + weekend ~ interval, avg_steps, type = "l", outer = T, layout = c(1, 2), 
+       ylab = "Number of steps", xlab = "Interval")
+```
+
+![plot of chunk unnamed-chunk-13](PA1_template_files/figure-html/unnamed-chunk-13.png) 
+
